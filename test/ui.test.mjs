@@ -191,6 +191,51 @@ console.log('─'.repeat(52))
   console.log('  ✓ 重开：回到 2 个方块 / 0 分')
 }
 
+// 6) 指针捕获时机
+//
+// 这里复现过一个真实 bug：遮罩是嵌在 #board 里的，而 #board 在 pointerdown
+// 阶段就 setPointerCapture，指针被抢走之后遮罩按钮的 click 永远不触发 ——
+// 表现就是「游戏结束后点再来一局没反应」。
+// 用 element.click() 是测不出来的，必须走完整的 pointer 序列。
+{
+  const board = $('board')
+
+  let captured = 0
+  board.setPointerCapture = () => {
+    captured++
+  }
+
+  const pointer = (type, x, y, id) => {
+    const ev = new window.MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
+      button: 0,
+    })
+    Object.defineProperty(ev, 'pointerType', { value: 'mouse' })
+    Object.defineProperty(ev, 'pointerId', { value: id })
+    return ev
+  }
+
+  // 落在遮罩按钮上：必须放行，不能抢指针
+  $('overlay-btn').dispatchEvent(pointer('pointerdown', 100, 100, 1))
+  ok(captured === 0, '落在遮罩按钮上的 pointerdown 不应抢占指针')
+
+  // 落在棋盘上：只记录起点，同样不该立刻抢
+  board.dispatchEvent(pointer('pointerdown', 10, 10, 2))
+  ok(captured === 0, 'pointerdown 阶段不应立刻抢占指针')
+
+  // 拖动超过阈值：这时才该接管
+  board.dispatchEvent(pointer('pointermove', 10, 90, 2))
+  ok(captured === 1, `确认拖拽后才应接管指针，实际接管 ${captured} 次`)
+
+  board.setPointerCapture = undefined
+  $('new-game').click()
+
+  console.log('  ✓ 指针捕获时机：按钮放行 / 拖拽才接管')
+}
+
 // 6) 最高分持久化
 {
   ok(!Number.isNaN(Number($('best').textContent)), '最高分不是数字')

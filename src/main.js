@@ -413,12 +413,21 @@ window.addEventListener('keydown', (e) => {
 let drag = null
 let dragged = false
 
+const DRAG_THRESHOLD = 24
+
 $board.addEventListener('pointerdown', (e) => {
   if (aiOn) return
   if (e.pointerType === 'mouse' && e.button !== 0) return
+
+  // 遮罩上的按钮归它自己管。这里必须放行：
+  // 一旦在 pointerdown 阶段就抢占指针，按钮的 click 会被彻底吞掉。
+  if (e.target && typeof e.target.closest === 'function' && e.target.closest('.overlay')) {
+    return
+  }
+
   drag = { x: e.clientX, y: e.clientY }
   dragged = false
-  if ($board.setPointerCapture) $board.setPointerCapture(e.pointerId)
+  // 注意：这里先不调用 setPointerCapture，等确认是在拖拽了再抢
 })
 
 $board.addEventListener('pointermove', (e) => {
@@ -428,10 +437,20 @@ $board.addEventListener('pointermove', (e) => {
   const dy = e.clientY - drag.y
   const ax = Math.abs(dx)
   const ay = Math.abs(dy)
-  if (Math.max(ax, ay) < 24) return
+  if (Math.max(ax, ay) < DRAG_THRESHOLD) return
 
   dragged = true
   drag = null
+
+  // 确认是拖拽了才接管指针 —— 这样滑出棋盘也还能收到 pointerup
+  if ($board.setPointerCapture) {
+    try {
+      $board.setPointerCapture(e.pointerId)
+    } catch {
+      /* 个别环境不支持，忽略即可 */
+    }
+  }
+
   move(ax > ay ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 })
 
