@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#fafaf9" />
+    <title>2048 · 简约留白</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="head">
+        <div class="brand">
+          <h1 class="title">2048</h1>
+          <p class="subtitle">滑动合并，凑出 2048</p>
+        </div>
+
+        <div class="scores">
+          <div class="score-card">
+            <span class="score-label">得分</span>
+            <span class="score-value" id="score">0</span>
+          </div>
+          <div class="score-card">
+            <span class="score-label">最高</span>
+            <span class="score-value" id="best">0</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <button class="btn" id="new-game" type="button">新游戏</button>
+        <button class="btn btn-ghost" id="undo" type="button">撤销</button>
+        <span class="hint" id="hint">方向键 / WASD / 滑动屏幕</span>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board" role="application" aria-label="2048 棋盘" tabindex="0">
+          <div class="grid" id="grid"></div>
+          <div class="tiles" id="tiles"></div>
+
+          <div class="overlay" id="overlay" hidden>
+            <div class="overlay-inner">
+              <p class="overlay-title" id="overlay-title"></p>
+              <p class="overlay-desc" id="overlay-desc"></p>
+              <button class="btn" id="overlay-btn" type="button">再来一局</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="foot">
+        <span class="stat">步数 <b id="steps">0</b></span>
+        <span class="dot">·</span>
+        <span class="stat">合并 <b id="merges">0</b></span>
+        <span class="dot">·</span>
+        <span class="stat">响应 <b id="perf">0</b> ms</span>
+      </footer>
+
+      <section class="ai">
+        <div class="ai-head">
+          <div class="ai-title">
+            <span class="ai-dot" id="ai-dot"></span>
+            <span>Jev 托管</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="ai-toggle" />
+            <span class="switch-track"><span class="switch-knob"></span></span>
+          </label>
+        </div>
+
+        <p class="ai-note" id="ai-note">未开启。打开后由 Jev 决定每一步往哪走。</p>
+
+        <dl class="ai-metrics">
+          <div class="metric"><dt>最近</dt><dd id="m-last">—</dd></div>
+          <div class="metric"><dt>平均</dt><dd id="m-avg">—</dd></div>
+          <div class="metric"><dt>最快</dt><dd id="m-min">—</dd></div>
+          <div class="metric"><dt>最慢</dt><dd id="m-max">—</dd></div>
+          <div class="metric"><dt>调用</dt><dd id="m-calls">0</dd></div>
+          <div class="metric"><dt>Token</dt><dd id="m-tokens">0</dd></div>
+        </dl>
+
+        <p class="ai-log" id="ai-log"></p>
+      </section>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

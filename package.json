@@ -1,0 +1,17 @@
+{
+  "name": "game-2048",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "2048 - 简约留白风",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/game.test.mjs && node test/ai.test.mjs && node test/ui.test.mjs && node test/host.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.0",
+    "vite": "^8.3.0"
+  }
+}

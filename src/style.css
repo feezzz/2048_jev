@@ -1,0 +1,545 @@
+/* ==========================================================================
+   2048 · 简约留白风
+   设计原则：大留白、低饱和、字重克制、动效短促
+   ========================================================================== */
+
+:root {
+  /* 底色与墨色 */
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --line: #e7e5e4;
+  --ink: #1c1917;
+  --ink-2: #78716c;
+  --ink-3: #a8a29e;
+
+  /* 棋盘几何：4 格 + 5 间隙 */
+  --gap: 3%;
+  --tile: 21.25%;
+  --step: 24.25%; /* tile + gap */
+
+  --radius-board: 14px;
+  --radius-tile: 10px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-move: 110ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   页面骨架
+   -------------------------------------------------------------------------- */
+
+.page {
+  width: 100%;
+  max-width: 440px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.brand .title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.brand .subtitle {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+.scores {
+  display: flex;
+  gap: 8px;
+}
+
+.score-card {
+  min-width: 68px;
+  padding: 8px 12px 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.score-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+}
+
+.score-value {
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  transition: color 0.2s var(--ease);
+}
+
+.score-value.bump {
+  color: #b45309;
+}
+
+/* --------------------------------------------------------------------------
+   工具条
+   -------------------------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fafaf9;
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease), transform 0.1s var(--ease),
+    background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.btn:hover {
+  opacity: 0.86;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  transform: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--line);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-3);
+  opacity: 1;
+}
+
+.hint {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   棋盘
+   -------------------------------------------------------------------------- */
+
+.board-wrap {
+  position: relative;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #f4f4f2;
+  border-radius: var(--radius-board);
+  outline: none;
+  /* 字号基准：格子内数字用 em 继承 */
+  font-size: clamp(13px, 4.1vw, 21px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.grid,
+.tiles {
+  position: absolute;
+  inset: 0;
+}
+
+/* 底格 */
+.cell {
+  position: absolute;
+  width: var(--tile);
+  height: var(--tile);
+  border-radius: var(--radius-tile);
+  background: #ecebe8;
+}
+
+.cell:nth-child(4n + 1) { left: calc(var(--gap) + 0 * var(--step)); }
+.cell:nth-child(4n + 2) { left: calc(var(--gap) + 1 * var(--step)); }
+.cell:nth-child(4n + 3) { left: calc(var(--gap) + 2 * var(--step)); }
+.cell:nth-child(4n + 4) { left: calc(var(--gap) + 3 * var(--step)); }
+
+.cell:nth-child(-n + 4)      { top: calc(var(--gap) + 0 * var(--step)); }
+.cell:nth-child(n + 5):nth-child(-n + 8)   { top: calc(var(--gap) + 1 * var(--step)); }
+.cell:nth-child(n + 9):nth-child(-n + 12)  { top: calc(var(--gap) + 2 * var(--step)); }
+.cell:nth-child(n + 13)      { top: calc(var(--gap) + 3 * var(--step)); }
+
+/* --------------------------------------------------------------------------
+   方块
+   -------------------------------------------------------------------------- */
+
+.tile {
+  position: absolute;
+  width: var(--tile);
+  height: var(--tile);
+  left: calc(var(--gap) + var(--c) * var(--step));
+  top: calc(var(--gap) + var(--r) * var(--step));
+  z-index: 2;
+  transition: left var(--dur-move) var(--ease), top var(--dur-move) var(--ease);
+}
+
+.tile-face {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-tile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.03);
+  will-change: transform;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.tile-num {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-size: 2.3em;
+  color: var(--ink-3);
+}
+
+.tile[data-len='3'] .tile-num { font-size: 1.85em; }
+.tile[data-len='4'] .tile-num { font-size: 1.45em; }
+.tile[data-len='5'] .tile-num { font-size: 1.15em; }
+
+/* 数值越大，色越深 —— 暖灰阶递进 */
+.tile[data-v='2'] .tile-face    { background: #ffffff; color: #a8a29e; }
+.tile[data-v='4'] .tile-face    { background: #f5f5f4; border-color: #e7e5e4; color: #78716c; }
+.tile[data-v='8'] .tile-face    { background: #e7e5e4; border-color: #e7e5e4; color: #57534e; }
+.tile[data-v='16'] .tile-face   { background: #d6d3d1; border-color: #d6d3d1; color: #44403c; }
+.tile[data-v='32'] .tile-face   { background: #a8a29e; border-color: #a8a29e; color: #1c1917; }
+.tile[data-v='64'] .tile-face   { background: #78716c; border-color: #78716c; color: #fafaf9; }
+.tile[data-v='128'] .tile-face  { background: #57534e; border-color: #57534e; color: #fafaf9; }
+.tile[data-v='256'] .tile-face  { background: #44403c; border-color: #44403c; color: #fafaf9; }
+.tile[data-v='512'] .tile-face  { background: #292524; border-color: #292524; color: #fafaf9; }
+.tile[data-v='1024'] .tile-face { background: #1c1917; border-color: #1c1917; color: #fafaf9; }
+.tile[data-v='2048'] .tile-face { background: #b45309; border-color: #b45309; color: #ffffff; }
+.tile[data-v='4096'] .tile-face { background: #92400e; border-color: #92400e; color: #ffffff; }
+.tile[data-v='8192'] .tile-face { background: #78350f; border-color: #78350f; color: #ffffff; }
+
+/* 深色块上的数字用白字 */
+.tile[data-v='2'] .tile-num,
+.tile[data-v='4'] .tile-num,
+.tile[data-v='8'] .tile-num,
+.tile[data-v='16'] .tile-num,
+.tile[data-v='32'] .tile-num { color: inherit; }
+
+.tile[data-v='64'] .tile-num,
+.tile[data-v='128'] .tile-num,
+.tile[data-v='256'] .tile-num,
+.tile[data-v='512'] .tile-num,
+.tile[data-v='1024'] .tile-num,
+.tile[data-v='2048'] .tile-num,
+.tile[data-v='4096'] .tile-num,
+.tile[data-v='8192'] .tile-num { color: #fafaf9; }
+
+.tile[data-v='2048'] .tile-num,
+.tile[data-v='4096'] .tile-num,
+.tile[data-v='8192'] .tile-num { color: #ffffff; }
+
+/* 出场：轻微放大 */
+.tile.is-new .tile-face {
+  animation: tile-in 160ms var(--ease);
+}
+
+@keyframes tile-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* 合并：弹一下 */
+.tile.is-merged .tile-face {
+  animation: tile-pop 180ms var(--ease);
+}
+
+@keyframes tile-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* 被吞并的方块：先滑到位再淡出 */
+.tile.is-ghost {
+  z-index: 1;
+  animation: ghost-out 160ms var(--ease) forwards;
+}
+
+@keyframes ghost-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile-face {
+    transition: none;
+    animation: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   遮罩
+   -------------------------------------------------------------------------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: var(--radius-board);
+  background: rgb(250 250 249 / 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 220ms var(--ease);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.overlay-inner {
+  text-align: center;
+  padding: 0 24px;
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.overlay-desc {
+  margin: 10px 0 20px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* --------------------------------------------------------------------------
+   页脚
+   -------------------------------------------------------------------------- */
+
+.foot {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.foot b {
+  font-weight: 500;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  opacity: 0.5;
+}
+
+/* --------------------------------------------------------------------------
+   Jev 托管面板
+   -------------------------------------------------------------------------- */
+
+.ai {
+  margin-top: 18px;
+  padding: 14px 16px 15px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.ai-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d6d3d1;
+  transition: background 0.2s var(--ease);
+}
+
+.ai-dot.is-on { background: #16a34a; }
+.ai-dot.is-busy { background: #d97706; }
+.ai-dot.is-off { background: #d6d3d1; }
+.ai-dot.is-err { background: #dc2626; }
+
+/* 开关 */
+.switch {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.switch-track {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e7e5e4;
+  transition: background 0.2s var(--ease);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.18);
+  transition: transform 0.2s var(--ease);
+}
+
+.switch input:checked + .switch-track {
+  background: var(--ink);
+}
+
+.switch input:checked + .switch-track .switch-knob {
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--ink-3);
+  outline-offset: 2px;
+}
+
+.ai-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.ai-note.is-warn {
+  color: #b45309;
+}
+
+.ai-metrics {
+  margin: 13px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px 6px;
+}
+
+.metric dt {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.metric dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  transition: color 0.2s var(--ease);
+}
+
+.metric dd.is-hot {
+  color: #b45309;
+}
+
+.ai-log {
+  margin: 11px 0 0;
+  min-height: 15px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
